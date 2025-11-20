@@ -737,22 +737,52 @@
             }
         }
 
-        function goToPayment() {
+        function goToPayment(e) {
+            // منع تحديث الصفحة
+            if (e) e.preventDefault();
+
             const name = document.getElementById('regShopName').value;
+            const phone = document.getElementById('regPhone').value;
             const user = document.getElementById('regUser').value;
             const pass = document.getElementById('regPass').value;
+            const btn = document.getElementById('nextBtn'); // الإمساك بالزر
 
-            if (!name || !user || !pass) { alert("يرجى ملء جميع البيانات"); return; }
+            if (!name || !phone || !user || !pass) {
+                alert("يرجى ملء جميع البيانات للانتقال للدفع");
+                return;
+            }
 
-            // التحقق من عدم تكرار اسم المستخدم
-            db.ref('merchants/' + user).once('value', snapshot => {
-                if (snapshot.exists()) {
-                    alert("اسم المستخدم هذا مأخوذ، اختر اسماً آخر");
-                } else {
-                    document.getElementById('step1').style.display = 'none';
-                    document.getElementById('step2').style.display = 'block';
-                }
-            });
+            // تغيير نص الزر ليعرف المستخدم أن هناك عملية تتم
+            const originalText = btn.innerText;
+            btn.innerText = "جاري التحقق...";
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+
+            // التحقق من عدم تكرار اسم المستخدم في فيرباس
+            db.ref('merchants/' + user).once('value')
+                .then(snapshot => {
+                    // إعادة الزر لحالته الطبيعية
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+
+                    if (snapshot.exists()) {
+                        alert("عفواً، اسم المستخدم هذا مسجل مسبقاً. يرجى اختيار اسم آخر.");
+                    } else {
+                        // الانتقال للخطوة الثانية (الدفع)
+                        document.getElementById('step1').style.display = 'none';
+                        document.getElementById('step2').style.display = 'block';
+                        document.getElementById('regTitle').innerText = "خطوة الدفع والتفعيل";
+                    }
+                })
+                .catch(error => {
+                    // في حالة وجود خطأ في الاتصال
+                    console.error(error);
+                    alert("حدث خطأ في الاتصال: " + error.message + "\nتأكد من اتصالك بالإنترنت");
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                });
         }
 
         function completeRegistration() {
